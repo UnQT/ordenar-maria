@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruta Bíblica de María — Competición por equipos</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f5f4ef; color: #1a1a1a; padding: 1.5rem; min-height: 100vh; }
+
+  /* ── Setup screen ── */
+  #setup-screen { max-width: 520px; margin: 3rem auto; background: #fff; border-radius: 16px; padding: 2rem; border: 1px solid #ddd; }
+  #setup-screen h1 { font-size: 20px; font-weight: 700; color: #1f3864; margin-bottom: 6px; }
+  #setup-screen p { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
+  .setup-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .team-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .setup-row input { flex: 1; font-size: 14px; padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; }
+  .setup-row input:focus { outline: none; border-color: #1f3864; }
+  #add-team-btn { font-size: 13px; color: #1f3864; background: none; border: 1px dashed #1f3864; border-radius: 8px; padding: 6px 14px; cursor: pointer; margin-bottom: 1.5rem; width: 100%; }
+  #start-btn { width: 100%; padding: 10px; background: #1f3864; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  #start-btn:hover { background: #162b4d; }
+  .setup-error { font-size: 12px; color: #c0392b; margin-top: 6px; display: none; }
+
+  /* ── Game screen ── */
+  #game-screen { display: none; }
+  header { max-width: 960px; margin: 0 auto 1rem; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  header h1 { font-size: 20px; font-weight: 600; color: #1f3864; }
+  header p { font-size: 13px; color: #666; }
+
+  /* Scoreboard */
+  #scoreboard { max-width: 960px; margin: 0 auto 1.25rem; display: flex; gap: 10px; flex-wrap: wrap; }
+  .score-card { background: #fff; border: 1.5px solid #ddd; border-radius: 10px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; min-width: 130px; }
+  .score-card.active-team { border-width: 2px; box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+  .score-card.winner { border-color: #1d9e75; background: #e1f5ee; }
+  .score-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .score-name { font-size: 13px; font-weight: 600; color: #1a1a1a; flex: 1; }
+  .score-val { font-size: 18px; font-weight: 700; color: #1f3864; }
+  .score-badge { font-size: 10px; background: #1d9e75; color: #fff; border-radius: 20px; padding: 2px 7px; font-weight: 600; }
+
+  /* Team selector */
+  #team-selector { max-width: 960px; margin: 0 auto 1rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #team-selector label { font-size: 13px; color: #555; font-weight: 500; }
+  .team-btn { font-size: 13px; padding: 6px 14px; border-radius: 20px; border: 2px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.15s; background: #f0f0f0; color: #333; }
+  .team-btn.selected { color: #fff; }
+
+  /* Toolbar */
+  .toolbar { max-width: 960px; margin: 0 auto 1rem; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-family: inherit; color: #1a1a1a; transition: background 0.15s; }
+  button:hover { background: #f0f0f0; }
+  .btn-check { background: #1f3864; color: #fff; border-color: #1f3864; font-weight: 600; }
+  .btn-check:hover { background: #162b4d; }
+  .btn-reset { border-color: #c0392b; color: #c0392b; }
+  .btn-reset:hover { background: #fdf0f0; }
+  .btn-solution { border-color: #888; color: #666; }
+
+  /* Legend */
+  .legend { max-width: 960px; margin: 0 auto 1.1rem; display: flex; gap: 14px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Result banner */
+  .result-banner { max-width: 960px; margin: 0 auto 1rem; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; }
+  .result-ok { background: #e1f5ee; color: #085041; border: 1px solid #9fe1cb; }
+  .result-no { background: #faece7; color: #712b13; border: 1px solid #f5c4b3; }
+
+  /* Winner overlay */
+  #winner-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100; align-items: center; justify-content: center; }
+  #winner-overlay.show { display: flex; }
+  .winner-box { background: #fff; border-radius: 20px; padding: 2.5rem 3rem; text-align: center; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .winner-trophy { font-size: 56px; margin-bottom: 0.5rem; }
+  .winner-title { font-size: 14px; font-weight: 500; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .winner-name { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .winner-sub { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+  .winner-close { padding: 10px 28px; background: #1f3864; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+  /* Cards */
+  .section-label { max-width: 960px; margin: 0 auto 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #888; }
+  .grid { max-width: 960px; margin: 0 auto 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 10px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 12px; overflow: hidden; cursor: grab; transition: border-color 0.15s, box-shadow 0.15s; user-select: none; }
+  .card:hover { border-color: #aaa; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .card.dragging { opacity: 0.45; }
+  .card.correct-pos { border: 2px solid #1d9e75; }
+  .card.wrong-pos { border: 2px solid #d85a30; }
+  .card-top { height: 6px; }
+  .card-body { padding: 10px 12px 12px; }
+  .card-from { font-size: 10px; color: #bbb; margin-bottom: 2px; min-height: 13px; }
+  .card-title { font-size: 13px; font-weight: 600; color: #1a1a1a; line-height: 1.3; margin-bottom: 4px; }
+  .card-ref { font-size: 11px; font-weight: 600; color: #555; margin-bottom: 4px; }
+  .card-text { font-size: 11px; color: #666; line-height: 1.5; }
+  .card-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 7px; }
+
+  .answer-grid { max-width: 960px; margin: 0 auto 2rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 10px; }
+  .slot { min-height: 112px; border: 2px dashed #ccc; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #aaa; padding: 4px; position: relative; transition: background 0.1s, border-color 0.1s; }
+  .slot.over { border-color: #378add; background: #e6f1fb; }
+  .slot-num { position: absolute; top: 6px; left: 9px; font-size: 11px; font-weight: 600; color: #ccc; }
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP SCREEN ══════════════════════════════════════════════════════════ -->
+<div id="setup-screen">
+  <h1>🕊️ Ruta Bíblica de María</h1>
+  <p>Escribe el nombre de cada equipo participante y pulsa <strong>Comenzar</strong>.</p>
+
+  <div id="teams-list">
+    <div class="setup-row">
+      <div class="team-color-dot" style="background:#534AB7"></div>
+      <input type="text" placeholder="Nombre del equipo 1" maxlength="30">
+    </div>
+    <div class="setup-row">
+      <div class="team-color-dot" style="background:#1D9E75"></div>
+      <input type="text" placeholder="Nombre del equipo 2" maxlength="30">
+    </div>
+    <div class="setup-row">
+      <div class="team-color-dot" style="background:#D85A30"></div>
+      <input type="text" placeholder="Nombre del equipo 3" maxlength="30">
+    </div>
+  </div>
+
+  <button id="add-team-btn" onclick="addTeamRow()">+ Añadir equipo</button>
+  <p class="setup-error" id="setup-error">Añade al menos un equipo con nombre.</p>
+  <button id="start-btn" onclick="startGame()">Comenzar actividad</button>
+</div>
+
+<!-- ══ GAME SCREEN ═══════════════════════════════════════════════════════════ -->
+<div id="game-screen">
+
+  <header>
+    <div>
+      <h1>Ruta Bíblica de María</h1>
+      <p>Ordena las 12 tarjetas cronológicamente y pulsa <strong>Comprobar</strong>.</p>
+    </div>
+    <button class="btn-reset" onclick="resetGame()" style="align-self:flex-start">↺ Nueva partida</button>
+  </header>
+
+  <!-- Scoreboard -->
+  <div class="section-label">Marcador</div>
+  <div id="scoreboard"></div>
+
+  <!-- Team selector -->
+  <div id="team-selector">
+    <label>¿Qué equipo está jugando ahora?</label>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn-check" onclick="checkOrder()">Comprobar orden</button>
+    <button onclick="shuffleCards()">Barajar tarjetas</button>
+    <button class="btn-solution" onclick="showSolution()">Ver solución</button>
+  </div>
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#534AB7"></div> Texto bíblico (NT)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#1D9E75"></div> Dogma mariano</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#D85A30"></div> Tradición apostólica</div>
+  </div>
+
+  <div id="result-banner" class="result-banner"></div>
+
+  <div class="section-label">Banco de tarjetas</div>
+  <div class="grid" id="bank"></div>
+
+  <div class="section-label">Tu ordenación cronológica (posición 1 → 12)</div>
+  <div class="answer-grid" id="answer"></div>
+
+</div>
+
+<!-- ══ WINNER OVERLAY ════════════════════════════════════════════════════════ -->
+<div id="winner-overlay">
+  <div class="winner-box">
+    <div class="winner-trophy">🏆</div>
+    <div class="winner-title">¡Primer equipo en resolver el orden correcto!</div>
+    <div class="winner-name" id="winner-name"></div>
+    <div class="winner-sub" id="winner-sub"></div>
+    <button class="winner-close" onclick="closeWinner()">Continuar</button>
+  </div>
+</div>
+
+<script>
+// ── Card data ─────────────────────────────────────────────────────────────
+const CARDS_DATA = [
+  { id:'inm',     order:0,  title:'Inmaculada Concepción',          ref:'Dogma — Pío IX, 1854',       text:'María fue concebida sin pecado original, preservada por los méritos de Cristo desde el primer instante de su existencia.',                   badge:'Dogma',            badgeColor:'#e1f5ee', badgeText:'#085041', color:'#1D9E75' },
+  { id:'nativ',   order:1,  title:'Natividad de María',              ref:'Tradición apostólica',        text:'Nacimiento de María, hija de Joaquín y Ana. Transmitido por el Protoevangelio de Santiago y la tradición de la Iglesia. Fiesta: 8 de sept.',  badge:'Tradición',        badgeColor:'#faece7', badgeText:'#712b13', color:'#D85A30' },
+  { id:'anunc',   order:2,  title:'La Anunciación',                  ref:'Lc 1,26-38',                 text:'El ángel Gabriel anuncia a María que concebirá al Hijo de Dios. "Hágase en mí según tu palabra."',                                             badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'visit',   order:3,  title:'La Visitación y el Magníficat',   ref:'Lc 1,39-56',                 text:'María visita a su prima Isabel. Juan el Bautista salta en el vientre. María canta el Magníficat.',                                             badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'nac',     order:4,  title:'Nacimiento de Jesús',             ref:'Lc 2,1-20 / Mt 1,18-25',    text:'María da a luz a Jesús en Belén. Los pastores acuden al pesebre. "No había sitio para ellos en la posada."',                                   badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'pres',    order:5,  title:'Presentación en el Templo',       ref:'Lc 2,22-38',                 text:'María y José presentan a Jesús en el Templo. Simeón profetiza: "Una espada atravesará tu alma."',                                              badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'egipto',  order:6,  title:'La Huida a Egipto',               ref:'Mt 2,13-15',                 text:'El ángel advierte a José en sueños. María, José y el Niño huyen a Egipto para escapar de la matanza ordenada por Herodes.',                   badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'perdido', order:7,  title:'El Niño perdido en el Templo',    ref:'Lc 2,41-52',                 text:'Jesús con 12 años se queda en el Templo. María lo busca tres días. "Tu padre y yo te buscábamos angustiados."',                               badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'cana',    order:8,  title:'Las Bodas de Caná',               ref:'Jn 2,1-12',                  text:'María intercede cuando falta el vino. "Haced lo que él os diga." Primer signo de Jesús por intercesión de María.',                            badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'cruz',    order:9,  title:'María al pie de la Cruz',         ref:'Jn 19,25-27',                text:'"Mujer, ahí tienes a tu hijo." Jesús confía su madre al discípulo amado. María, madre de todos los creyentes.',                               badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'pent',    order:10, title:'María en Pentecostés',            ref:'Hch 1,14',                   text:'María persevera en oración con los apóstoles en el Cenáculo. Presente en el nacimiento de la Iglesia.',                                        badge:'Nuevo Testamento', badgeColor:'#eeedfe', badgeText:'#3c3489', color:'#534AB7' },
+  { id:'asun',    order:11, title:'Asunción de María',               ref:'Dogma — Pío XII, 1950',      text:'Al final de su vida terrena, María fue asumida en cuerpo y alma a la gloria celestial. Anticipo de la resurrección universal.',               badge:'Dogma',            badgeColor:'#e1f5ee', badgeText:'#085041', color:'#1D9E75' }
+];
+
+const TEAM_COLORS = ['#534AB7','#1D9E75','#D85A30','#C0873F','#2E86AB','#8B3A8B','#B5451B','#1A6B3C'];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let teams = [];            // [{name, color, score, solved, attempts}]
+let activeTeam = 0;
+let solvedBy = null;       // index of first team to solve
+let shuffled = [];
+let slots = new Array(12).fill(null);
+let dragCard = null, dragFrom = null;
+
+// ── Setup ──────────────────────────────────────────────────────────────────
+function addTeamRow() {
+  const list = document.getElementById('teams-list');
+  const idx = list.children.length;
+  if (idx >= TEAM_COLORS.length) return;
+  const row = document.createElement('div');
+  row.className = 'setup-row';
+  row.innerHTML = `<div class="team-color-dot" style="background:${TEAM_COLORS[idx]}"></div>
+    <input type="text" placeholder="Nombre del equipo ${idx+1}" maxlength="30">`;
+  list.appendChild(row);
+}
+
+function startGame() {
+  const inputs = document.querySelectorAll('#teams-list input');
+  const names = [...inputs].map(i => i.value.trim()).filter(Boolean);
+  if (!names.length) { document.getElementById('setup-error').style.display='block'; return; }
+  teams = names.map((name, i) => ({ name, color: TEAM_COLORS[i], score: 0, solved: false, attempts: 0 }));
+  activeTeam = 0;
+  solvedBy = null;
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  buildTeamSelector();
+  renderScoreboard();
+  shuffleCards();
+}
+
+function buildTeamSelector() {
+  const sel = document.getElementById('team-selector');
+  sel.innerHTML = '<label>¿Qué equipo juega ahora?</label>';
+  teams.forEach((t, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'team-btn' + (i === activeTeam ? ' selected' : '');
+    btn.textContent = t.name;
+    btn.style.borderColor = t.color;
+    if (i === activeTeam) btn.style.background = t.color;
+    btn.onclick = () => selectTeam(i);
+    sel.appendChild(btn);
+  });
+}
+
+function selectTeam(i) {
+  activeTeam = i;
+  buildTeamSelector();
+  hideBanner();
+  // Reset board for this team's turn
+  shuffleCards();
+}
+
+function renderScoreboard() {
+  const sb = document.getElementById('scoreboard');
+  sb.innerHTML = '';
+  teams.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = 'score-card' + (i === activeTeam ? ' active-team' : '') + (t.solved && solvedBy === i ? ' winner' : '');
+    card.style.borderColor = (i === activeTeam) ? t.color : '#ddd';
+    card.innerHTML = `
+      <div class="score-dot" style="background:${t.color}"></div>
+      <div class="score-name">${t.name}</div>
+      ${solvedBy === i ? '<span class="score-badge">🏆 1.º</span>' : `<div class="score-val">${t.attempts > 0 ? t.attempts + ' int.' : '—'}</div>`}
+    `;
+    sb.appendChild(card);
+  });
+}
+
+// ── Game logic ─────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+function shuffleCards() {
+  shuffled = shuffle(CARDS_DATA);
+  slots = new Array(12).fill(null);
+  hideBanner();
+  renderBank(); renderAnswer();
+}
+
+function showSolution() {
+  slots = [...CARDS_DATA].sort((a,b) => a.order - b.order);
+  shuffled = [];
+  hideBanner();
+  renderBank(); renderAnswer();
+}
+
+function resetGame() {
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'block';
+  document.getElementById('setup-error').style.display = 'none';
+}
+
+function checkOrder() {
+  const team = teams[activeTeam];
+  team.attempts++;
+
+  if (slots.some(s => s === null)) {
+    showBanner('Faltan tarjetas por colocar. Coloca todas las 12 antes de comprobar.', false);
+    renderScoreboard();
+    return;
+  }
+
+  const correct = slots.filter((c, i) => c && c.order === i).length;
+
+  if (correct === 12) {
+    // First team to solve?
+    if (solvedBy === null) {
+      solvedBy = activeTeam;
+      team.solved = true;
+      showWinner(team);
+    } else {
+      showBanner(`✓ ¡Correcto! ${team.name} ha resuelto el orden en ${team.attempts} intento${team.attempts>1?'s':''}. El primero fue ${teams[solvedBy].name}.`, true);
+    }
+  } else {
+    showBanner(`${correct} de 12 tarjetas en la posición correcta. Sigue intentándolo, ${team.name}.`, false);
+  }
+
+  renderScoreboard();
+  renderAnswer();
+}
+
+function showWinner(team) {
+  document.getElementById('winner-name').textContent = team.name;
+  document.getElementById('winner-name').style.color = team.color;
+  document.getElementById('winner-sub').textContent =
+    `Ha resuelto el orden correcto en ${team.attempts} intento${team.attempts>1?'s':''}.`;
+  document.getElementById('winner-overlay').classList.add('show');
+}
+
+function closeWinner() {
+  document.getElementById('winner-overlay').classList.remove('show');
+  showBanner(`🏆 ¡${teams[solvedBy].name} fue el primer equipo en resolver el orden correcto!`, true);
+}
+
+function hideBanner() { document.getElementById('result-banner').style.display='none'; }
+function showBanner(msg, ok) {
+  const b = document.getElementById('result-banner');
+  b.textContent = msg; b.className = 'result-banner ' + (ok ? 'result-ok' : 'result-no');
+  b.style.display = 'block';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function makeCardEl(card, fromBank, slotIdx) {
+  const div = document.createElement('div');
+  div.className = 'card'; div.draggable = true;
+  div.innerHTML = `
+    <div class="card-top" style="background:${card.color}"></div>
+    <div class="card-body">
+      <div class="card-from">${fromBank ? 'Banco de tarjetas' : ''}</div>
+      <div class="card-title">${card.title}</div>
+      <div class="card-ref">${card.ref}</div>
+      <div class="card-text">${card.text}</div>
+      <span class="card-badge" style="background:${card.badgeColor};color:${card.badgeText}">${card.badge}</span>
+    </div>`;
+  div.addEventListener('dragstart', e => {
+    dragCard = card; dragFrom = fromBank ? 'bank' : slotIdx;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => div.classList.add('dragging'), 0);
+  });
+  div.addEventListener('dragend', () => div.classList.remove('dragging'));
+  return div;
+}
+
+function renderBank() {
+  const bank = document.getElementById('bank');
+  bank.innerHTML = '';
+  if (!shuffled.length) {
+    bank.innerHTML = '<p style="grid-column:1/-1;font-size:13px;color:#aaa;padding:0.5rem 0">Todas las tarjetas han sido colocadas.</p>';
+  } else {
+    shuffled.forEach(c => bank.appendChild(makeCardEl(c, true, null)));
+  }
+  bank.addEventListener('dragover', e => e.preventDefault());
+  bank.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragCard) return;
+    if (dragFrom !== 'bank') { slots[dragFrom] = null; shuffled.push(dragCard); }
+    dragCard = null; dragFrom = null;
+    renderBank(); renderAnswer();
+  });
+}
+
+function renderAnswer() {
+  const ans = document.getElementById('answer');
+  ans.innerHTML = '';
+  const checked = document.getElementById('result-banner').style.display !== 'none';
+  slots.forEach((card, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.innerHTML = `<span class="slot-num">${i+1}</span>`;
+    if (card) {
+      const el = makeCardEl(card, false, i);
+      if (checked) el.classList.add(card.order === i ? 'correct-pos' : 'wrong-pos');
+      slot.appendChild(el);
+    } else {
+      const ph = document.createElement('span'); ph.textContent = 'Suelta aquí';
+      slot.appendChild(ph);
+    }
+    slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('over'); });
+    slot.addEventListener('dragleave', () => slot.classList.remove('over'));
+    slot.addEventListener('drop', e => {
+      e.preventDefault(); slot.classList.remove('over');
+      if (!dragCard) return;
+      const evicted = slots[i];
+      if (dragFrom === 'bank') {
+        shuffled = shuffled.filter(c => c.id !== dragCard.id);
+        if (evicted) shuffled.push(evicted);
+      } else { slots[dragFrom] = evicted || null; }
+      slots[i] = dragCard; dragCard = null; dragFrom = null;
+      hideBanner(); renderBank(); renderAnswer();
+    });
+    ans.appendChild(slot);
+  });
+}
+</script>
+</body>
+</html>
